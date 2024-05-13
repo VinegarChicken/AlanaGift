@@ -1,0 +1,159 @@
+<html>
+    <head>
+        <title>I'm Batman</title>
+        <!--Transformed from https://codepen.io/2ne/pen/AXMLpj-->
+        <link rel="stylesheet" href="style.css">
+        <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+        <body>
+
+<div class="messages-wrapper">
+  <div id="contact-name">
+    Milo 👨🏽‍💻♡
+  </div>
+</div>
+
+        </body>
+        <script>
+          class Message{
+ constructor(body, time, html, ct) {
+ this.body=body,
+ this.time=time;
+ this.html=html;
+ this.ct=ct;
+ }
+}
+window.onscroll = function() {
+
+// Get the offset position of the navbar
+var sticky = $("#contact-name").offset().top;
+
+if (window.pageYOffset >= sticky) {
+  $("#contact-name").addClass("sticky")
+  } else {
+    $("#contact-name").removeClass("sticky");
+  }
+};
+          
+  var messages = new Map();
+  let today = new Date();
+  $.ajax({
+    type: "GET",
+url: "Media/split_"+(today.getMonth() + 1).toString()+"."+today.getDate().toString()+".xml",
+dataType: "text",
+success: function(res){
+  var xml;
+  var xml = $.parseXML(res);
+  $xml = $( xml )
+  $media = $xml.find("media");
+  $mms = $media.find("mms");
+          $mms.each(function(num, el_){
+      var mms = $(el_);
+      var ms = parseInt(mms.attr("date"));
+      if(new Date(ms).getDate() != today.getDate()){
+          return;
+        };
+      
+      mms.find("part").each(function(num, el){
+        let html;
+        var contentType = $(el).attr("ct");
+        let body;
+        let date = new Date();
+        let msgDate =  new Date(ms);
+        if(contentType == "text/plain"){
+            body = $(el).attr("text");
+            if(mms.attr("m_type") == "128"){
+      html = '<div class="message from" id=' + ms.toString() + ">" + body + '</div>';
+    }
+    else{
+      html = '<div class="message to" id=' + ms.toString() + ">" + body + '</div>';
+    }
+    if(messages.has(ms)){
+     messages.set(ms + 1, new Message(body, msgDate, html, contentType));
+    }
+    else{
+      messages.set(ms, new Message(body, msgDate, html, contentType));
+    }  
+
+          } 
+      else if(contentType.includes("image")){
+            body = $(el).attr("data");
+            if(mms.attr("m_type") == "132"){
+      html = '<img class="from" id=' + ms.toString()  + ' src=""' + '>';
+    }
+    else{
+      html = '<img class="to" id=' + ms.toString()  + ' src=""' + '>';
+    }
+    messages.set(ms, new Message(body, msgDate, html, contentType));
+
+          }
+          else if(contentType.includes("video")){
+            body = $(el).attr("data");
+            if(mms.attr("m_type") == "132"){
+      html = '<video class="from" id=' + ms.toString()  + ' src=""' + '>';
+    }
+    else{
+      html = '<video class="to" id=' + ms.toString()  + ' src=""' + '>';
+    }
+  //  messages.set(ms, new Message(body, new Date(ms), html, contentType));
+  }
+}
+      );
+        
+      })
+      //console.log(part.attr("m_type"))
+
+}});
+          $.ajax({
+    type: "GET",
+url: "Alana.xml",
+dataType: "text",
+success: function(res){
+  var xml = $.parseXML(res);
+  $xml = $( xml )
+  $smses = $xml.find("smses");
+  $media = $xml.find("media");
+  $sms = $smses.find("sms");
+  $mms = $media.find("mms");
+  $sms.each(function(num, el){
+    var msg = $(el);
+    var ms = parseInt(msg.attr("date"));
+    //console.log(msg.attr("type"));
+    let date = new Date(ms);
+    let body = msg.attr("body");
+    if(date.getDate() != today.getDate()){
+          return;
+        };
+    if(msg.attr("type") == "2"){
+      html = '<div class="message from" id=' + ms.toString() + ">" + body + '</div>';
+    }
+    else{
+      html = '<div class="message to" id=' + ms.toString() + ">" + body + '</div>';
+    }
+    messages.set(ms, new Message(body, date, html, null));
+  });
+  let messages_ = new Map([...messages.entries()].sort());
+  var dateActive=false;
+    for (let[key, value] of messages_){
+      if(!dateActive){
+        let day = value.time.getDate(); 
+      let month = value.time.getMonth() + 1;
+      let year = value.time.getFullYear();
+      today = month + '/' + day + '/' + year;
+        $(".messages-wrapper").append('<div class="message" id=currentDate' + ">" + today + '</div>');
+        dateActive=true;
+      }
+        $(".messages-wrapper").append(value.html);
+        if(value.html.toString().includes("src")){
+          //console.log(value.html.toString())
+          var src = "data:"+value.ct+";base64,"+value.body;
+        $("#"+key.toString()).attr("src", src);
+        }
+        
+    }
+}
+
+});
+
+        </script>
+    </head>
+</html>
