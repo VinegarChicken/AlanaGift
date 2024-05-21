@@ -75,6 +75,12 @@ header h2 {
   color: #000;
   text-align: center;
 }
+#start{
+  text-align: center;
+}
+#date-conainer{
+  text-align: center;
+}
 .message.to {
     background-color: #7fffd4;
     color: #000;

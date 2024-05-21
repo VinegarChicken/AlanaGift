@@ -10,6 +10,9 @@
   <div id="contact-name">
     Milo 👨🏽‍💻♡
   </div>
+  <div id="date-container" class="message">
+    <input type="date" id="start" name="trip-start" value="" min="2023-05-09" max="2023-06-04" />
+  </div>
 </div>
 
         </body>
@@ -22,25 +25,12 @@
  this.ct=ct;
  }
 }
-window.onscroll = function() {
 
-// Get the offset position of the navbar
-var sticky = $("#contact-name").offset().top;
+function compareDates(d1, d2){
+  return d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate() && d1.getFullYear() === d2.getFullYear()
+}
 
-if (window.pageYOffset >= sticky) {
-  $("#contact-name").addClass("sticky")
-  } else {
-    $("#contact-name").removeClass("sticky");
-  }
-};
-          
-  var messages = new Map();
-  let today = new Date();
-  $.ajax({
-    type: "GET",
-url: "Media/split_"+(today.getMonth() + 1).toString()+"."+today.getDate().toString()+".xml",
-dataType: "text",
-success: function(res){
+function handleMedia(res, date, messages){
   var xml;
   var xml = $.parseXML(res);
   $xml = $( xml )
@@ -49,7 +39,8 @@ success: function(res){
           $mms.each(function(num, el_){
       var mms = $(el_);
       var ms = parseInt(mms.attr("date"));
-      if(new Date(ms).getDate() != today.getDate()){
+     // console.log(compareDates(new Date(ms), date))
+      if(!compareDates(new Date(ms), date)){
           return;
         };
       
@@ -57,7 +48,6 @@ success: function(res){
         let html;
         var contentType = $(el).attr("ct");
         let body;
-        let date = new Date();
         let msgDate =  new Date(ms);
         if(contentType == "text/plain"){
             body = $(el).attr("text");
@@ -102,49 +92,70 @@ success: function(res){
       })
       //console.log(part.attr("m_type"))
 
-}});
-          $.ajax({
-    type: "GET",
-url: "Alana.xml",
-dataType: "text",
-success: function(res){
+}
+
+function handleTexts(res, date, messages){
   var xml = $.parseXML(res);
   $xml = $( xml )
   $smses = $xml.find("smses");
-  $media = $xml.find("media");
   $sms = $smses.find("sms");
-  $mms = $media.find("mms");
   $sms.each(function(num, el){
     var msg = $(el);
     var ms = parseInt(msg.attr("date"));
     //console.log(msg.attr("type"));
-    let date = new Date(ms);
+    let msgDate = new Date(ms);
     let body = msg.attr("body");
-    if(date.getDate() != today.getDate()){
+    
+    if(!compareDates(msgDate, date)){
           return;
         };
+        
     if(msg.attr("type") == "2"){
       html = '<div class="message from" id=' + ms.toString() + ">" + body + '</div>';
     }
     else{
       html = '<div class="message to" id=' + ms.toString() + ">" + body + '</div>';
     }
-    messages.set(ms, new Message(body, date, html, null));
+    messages.set(ms, new Message(body, msgDate, html, null));
   });
-  let messages_ = new Map([...messages.entries()].sort());
-  var dateActive=false;
-    for (let[key, value] of messages_){
-      if(!dateActive){
-        let day = value.time.getDate(); 
-      let month = value.time.getMonth() + 1;
-      let year = value.time.getFullYear();
-      today = month + '/' + day + '/' + year;
-        $(".messages-wrapper").append('<div class="message" id=currentDate' + ">" + today + '</div>');
-        dateActive=true;
-      }
+  return messages;
+ 
+}
+window.onscroll = function() {
+
+// Get the offset position of the navbar
+var sticky = $("#contact-name").offset().top;
+
+if (window.pageYOffset >= sticky) {
+  $("#contact-name").addClass("sticky")
+  } else {
+    $("#contact-name").removeClass("sticky");
+  }
+};
+          function displayMessages(selectedDate){
+            var messages = new Map();
+
+            $.ajax({
+    type: "GET",
+url: "Media/split_"+(selectedDate.getMonth() + 1).toString()+"."+selectedDate.getDate().toString()+".xml",
+dataType: "text",
+async: false,
+success: function(res){
+  $(".from, .to").remove();
+  handleMedia(res, selectedDate, messages)
+}
+});
+          $.ajax({
+    type: "GET",
+url: "Alana.xml",
+dataType: "text",
+async: false,
+success: function(res){
+  handleTexts(res, selectedDate, messages);
+  var messages_ = new Map([...messages.entries()].sort());
+  for (let[key, value] of messages_){
         $(".messages-wrapper").append(value.html);
         if(value.html.toString().includes("src")){
-          //console.log(value.html.toString())
           var src = "data:"+value.ct+";base64,"+value.body;
         $("#"+key.toString()).attr("src", src);
         }
@@ -153,7 +164,42 @@ success: function(res){
 }
 
 });
+          }
+  let today = new Date();
+  $("#start").attr("value", "2023-0"+(today.getMonth()+1).toString()+"-"+today.getDate().toString());
+  today = new Date(2023, today.getMonth(), today.getDate() + 1);
+    displayMessages(today);
+  /*
+  $.ajax({
+    type: "GET",
+url: "Media/split_"+(today.getMonth() + 1).toString()+"."+today.getDate().toString()+".xml",
+dataType: "text",
+success: function(res){
+  handleMedia(res, today)
+}
+});
+          $.ajax({
+    type: "GET",
+url: "Alana.xml",
+dataType: "text",
+success: function(res){
+  handleTexts(res, today)
+}
+});
+*/
 
+
+$("#start").on("change", function(){
+  let selectedDate = new Date($("#start").val());
+  selectedDate = new Date(2023, selectedDate.getMonth(), selectedDate.getDate() + 1);
+  //console.log(selectedDate)
+  displayMessages(selectedDate);
+
+    
+//$(".messages-wrapper").remove("from to");
+//messages.clear()
+
+})
         </script>
     </head>
 </html>
