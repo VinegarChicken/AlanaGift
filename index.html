@@ -134,14 +134,13 @@ if (window.pageYOffset >= sticky) {
 };
           function displayMessages(selectedDate){
             var messages = new Map();
-
+            $(".from, .to").remove();
             $.ajax({
     type: "GET",
 url: "Media/split_"+(selectedDate.getMonth() + 1).toString()+"."+selectedDate.getDate().toString()+".xml",
 dataType: "text",
 async: false,
 success: function(res){
-  $(".from, .to").remove();
   handleMedia(res, selectedDate, messages)
 }
 });
